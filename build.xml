@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Inspector" default="jar" basedir=".">
+	<target name ="init" description="Creates the directory where the compiled classes will be stored">
+	    <mkdir dir="classes" />
+	</target>
+	<target name ="compile" description="Compiles the classes" depends="init">
+		<javac srcdir="src" destdir="classes" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile" description="Creates the project jar">
+			<jar destfile="inspector.jar" basedir="classes" />
+		</target>
+	<target name ="clean" description="Deletes the compiled classes">
+		<delete dir="classes" />
+	</target>
+</project>
