@@ -1,5 +1,8 @@
 package ist.meic.pa;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 public class Inspector {
 
     Object inspectTarget;
@@ -15,6 +18,7 @@ public class Inspector {
 
     private void readCommands() {
         while (true) {
+            System.err.print("> ");
             String[] command = System.console().readLine().split(" ");
             if (command[0].equals("q")) {
                 return;
@@ -31,21 +35,68 @@ public class Inspector {
     }
 
     private void callMethod(String method, String[] command) {
-        String[] methodArgs = new String[command.length - 2];
-        System.arraycopy(command, 2, methodArgs, 0, command.length - 2);
+
     }
 
     private void modifyValue(String parameter, String value) {
-        // TODO Auto-generated method stub
-
+        Field classField;
+        try {
+            classField = getField(parameter);
+        } catch (NoSuchFieldException | SecurityException e) {
+            System.err.println("The class does not have the field " + parameter);
+            return;
+        }
+        try {
+            classField.set(inspectTarget, Integer.parseInt(value));
+        } catch (IllegalArgumentException | IllegalAccessException e) {
+            System.err.println("The inspector only supports modifying fields of type Integer");
+        }
     }
 
     private void inspectValue(String parameter) {
-        // TODO Auto-generated method stub
+        Field classField;
+        try {
+            classField = getField(parameter);
+        } catch (NoSuchFieldException | SecurityException e) {
+            System.err.println("The class does not have the field " + parameter);
+            return;
+        }
+        System.err.print(Modifier.toString(classField.getModifiers()) + " ");
+        System.err.print(classField.getType().toString() + " ");
+        System.err.print(classField.getName() + " = ");
+        System.err.println(getFieldValue(classField));
+    }
 
+    private Field getField(String parameter) throws NoSuchFieldException, SecurityException {
+        Class<?> inspectClass = inspectTarget.getClass();
+        Field classField;
+        classField = inspectClass.getDeclaredField(parameter);
+        classField.setAccessible(true);
+        return classField;
     }
 
     private void printObjectProperties() {
-        // TODO Auto-generated method stub
+        Class<?> inspectClass = inspectTarget.getClass();
+
+        System.err.print(inspectTarget.toString() + " is an instance of class ");
+        System.err.println(inspectClass.getName());
+        System.err.println("----------");
+
+        Field[] classFields = inspectClass.getDeclaredFields();
+        for (Field f : classFields) {
+            f.setAccessible(true);
+            System.err.print(Modifier.toString(f.getModifiers()) + " ");
+            System.err.print(f.getType().toString() + " ");
+            System.err.print(f.getName() + " = ");
+            System.err.println(getFieldValue(f));
+        }
+    }
+
+    private String getFieldValue(Field f) {
+        try {
+            return f.get(inspectTarget).toString();
+        } catch (IllegalArgumentException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
