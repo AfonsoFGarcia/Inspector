@@ -84,21 +84,26 @@ public class Inspector {
 	private Object[] castArguments(String[] command, Class<?>[] parameterTypes) {
 		Object[] ret = new Object[parameterTypes.length];
 		for (int i = 0; i < parameterTypes.length; i++) {
-			if (command[i + 2].startsWith("\"")
-					&& command[i + 2].endsWith("\"")) {
-				ret[i] = command[i + 2].substring(1,
-						command[i + 2].length() - 1);
-			} else if (command[i + 2].startsWith("'")
-					&& command[i + 2].endsWith("'")) {
-				ret[i] = command[i + 2].charAt(1);
-			} else if (command[i + 2].equals("true")
-					|| command[i + 2].equals("false")) {
-				ret[i] = new Boolean(command[i + 2]);
-			} else {
-				ret[i] = Integer.parseInt(command[i + 2]);
-			}
+			ret[i] = castArgument(command[i+2]);
 		}
 		return ret;
+	}
+
+	private Object castArgument(String value) {
+		if (value.startsWith("\"")
+				&& value.endsWith("\"")) {
+			return value.substring(1,
+					value.length() - 1);
+		} else if (value.startsWith("'")
+				&& value.endsWith("'")) {
+			return value.charAt(1);
+		} else if (value.equals("true")
+				|| value.equals("false")) {
+			return new Boolean(value);
+		
+		} else {
+			return Integer.parseInt(value);
+		}
 	}
 
 	private void modifyValue(String parameter, String value) {
@@ -111,7 +116,7 @@ public class Inspector {
 			return;
 		}
 		try {
-			classField.set(inspectTarget, Integer.parseInt(value));
+			classField.set(inspectTarget, castArgument(value));
 		} catch (IllegalArgumentException e) {
 			System.err
 					.println("The inspector only supports modifying fields of type Integer");
