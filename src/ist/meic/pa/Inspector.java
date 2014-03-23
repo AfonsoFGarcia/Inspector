@@ -1,6 +1,8 @@
 package ist.meic.pa;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class Inspector {
@@ -35,7 +37,30 @@ public class Inspector {
     }
 
     private void callMethod(String method, String[] command) {
-
+    	Class<?> inspectClass = inspectTarget.getClass();
+    	Object ret = null;
+    	try {
+			Method m = inspectClass.getMethod(method);
+			ret = m.invoke(inspectTarget);
+		} catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	System.out.println(ret.toString());
+    	
     }
 
     private void modifyValue(String parameter, String value) {
