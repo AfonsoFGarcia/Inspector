@@ -42,25 +42,32 @@ public class Inspector {
         Field classField;
         try {
             classField = getField(parameter);
-        } catch (NoSuchFieldException | SecurityException e) {
+        } catch (NoSuchFieldException e) {
             System.err.println("The class does not have the field " + parameter);
             return;
         }
         try {
             classField.set(inspectTarget, Integer.parseInt(value));
-        } catch (IllegalArgumentException | IllegalAccessException e) {
+        } catch (IllegalArgumentException e) {
             System.err.println("The inspector only supports modifying fields of type Integer");
+        } catch (IllegalAccessException e) {
+            System.err.println("");
         }
     }
 
     private void inspectValue(String parameter) {
         Field classField;
+
         try {
             classField = getField(parameter);
-        } catch (NoSuchFieldException | SecurityException e) {
+        } catch (NoSuchFieldException e) {
+            System.err.println("The class does not have the field " + parameter);
+            return;
+        } catch (SecurityException e) {
             System.err.println("The class does not have the field " + parameter);
             return;
         }
+
         System.err.print(Modifier.toString(classField.getModifiers()) + " ");
         System.err.print(classField.getType().toString() + " ");
         System.err.print(classField.getName() + " = ");
@@ -95,7 +102,7 @@ public class Inspector {
     private String getFieldValue(Field f) {
         try {
             return f.get(inspectTarget).toString();
-        } catch (IllegalArgumentException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
