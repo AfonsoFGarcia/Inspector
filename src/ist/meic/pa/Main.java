@@ -6,9 +6,17 @@ public class Main {
         public Integer a;
         public String b;
 
-        public void setB(String a) {
+        public void setA(Integer a) {
             System.out.println("Setting a to " + a);
-            this.b = a;
+            this.a = a;
+        }
+        
+        public int somaTodos(int x, int y, int z){
+        	return x + y + z;
+        }
+        
+        public void escreveCoisas(int i, String s, char c, boolean t){
+        	System.out.println(i + s + c + t);
         }
     }
 
