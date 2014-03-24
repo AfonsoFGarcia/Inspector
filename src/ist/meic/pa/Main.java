@@ -11,6 +11,7 @@ public class Main {
             this.a = a;
         }
 
+        @SuppressWarnings("unused")
         private int somaTodos(int x, int y, int z) {
             return x + y + z;
         }
