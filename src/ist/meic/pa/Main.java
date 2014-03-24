@@ -10,13 +10,13 @@ public class Main {
             System.out.println("Setting a to " + a);
             this.a = a;
         }
-        
-        public int somaTodos(int x, int y, int z){
-        	return x + y + z;
+
+        private int somaTodos(int x, int y, int z) {
+            return x + y + z;
         }
-        
-        public void escreveCoisas(int i, String s, char c, boolean t){
-        	System.out.println(i + s + c + t);
+
+        public void escreveCoisas(int i, String s, char c, boolean t) {
+            System.out.println(i + s + c + t);
         }
     }
 
