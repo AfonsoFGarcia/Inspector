@@ -91,6 +91,14 @@ public class Inspector {
             return value.charAt(1);
         } else if (value.equals("true") || value.equals("false")) {
             return new Boolean(value);
+        } else if (value.endsWith("L")) {
+            return Long.parseLong(value.substring(0, value.length() - 1));
+        } else if (value.endsWith("f")) {
+            return Float.parseFloat(value.substring(0, value.length() - 1));
+        } else if (value.endsWith("d")) {
+            return Double.parseDouble(value.substring(0, value.length() - 1));
+        } else if (value.startsWith("0x")) {
+            return Byte.parseByte(value.substring(2, value.length()), 16);
         } else {
             return Integer.parseInt(value);
         }
