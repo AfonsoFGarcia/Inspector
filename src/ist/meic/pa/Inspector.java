@@ -108,6 +108,7 @@ public class Inspector {
         try {
             Field classField = getField(parameter);
             classField.set(inspectTarget, castValue(value));
+            printObjectProperties();
         } catch (NoSuchFieldException e) {
             System.err.println("The class does not have the field " + parameter);
         } catch (IllegalArgumentException e) {
