@@ -28,7 +28,7 @@ public class Inspector {
                 inspectValue(command[1]);
             } else if (command[0].equals("m")) {
                 if (command.length != 3) {
-                    System.out.println("Value was not specified!");
+                    System.err.println("Value was not specified!");
                     continue;
                 }
                 modifyValue(command[1], command[2]);
@@ -53,23 +53,23 @@ public class Inspector {
                     ret = m.invoke(inspectTarget, args);
 
                     if (ret != null) {
-                        System.out.println(ret.toString());
+                        System.err.println(ret.toString());
                     }
 
                     return;
                 }
             }
-            System.out.println("The method " + method + " does not exist in the inspected class.");
+            System.err.println("The method " + method + " does not exist in the inspected class.");
         } catch (SecurityException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         } catch (IllegalAccessException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         } catch (IllegalArgumentException e) {
-            System.out.println("The arguments passed do not match the declared types.");
+            System.err.println("The arguments passed do not match the declared types.");
         } catch (InvocationTargetException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
     }
@@ -111,7 +111,7 @@ public class Inspector {
         } catch (NoSuchFieldException e) {
             System.err.println("The class does not have the field " + parameter);
         } catch (IllegalArgumentException e) {
-            System.out.println("The arguments passed do not match the declared type.");
+            System.err.println("The arguments passed do not match the declared type.");
         } catch (IllegalAccessException e) {
             System.err.println("");
         }
@@ -128,13 +128,13 @@ public class Inspector {
             System.err.println("The class does not have the field " + parameter);
             return;
         } catch (SecurityException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             return;
         } catch (IllegalArgumentException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         } catch (IllegalAccessException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
     }
@@ -165,10 +165,10 @@ public class Inspector {
                 System.err.println(getFieldValue(f));
             }
         } catch (IllegalArgumentException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         } catch (IllegalAccessException e) {
-            System.out.println("An exception was caught while trying to run the method. Printing it's stack trace.");
+            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
     }
