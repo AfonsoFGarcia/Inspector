@@ -12,4 +12,5 @@
 	<target name ="clean" description="Deletes the compiled classes">
 		<delete dir="classes" />
 	</target>
+	<target name="test" description="Target for building in Travis-CI" depends="compile" />
 </project>
