@@ -27,14 +27,22 @@ public class Inspector {
             if (command[0].equals("q")) {
                 return;
             } else if (command[0].equals("i")) {
+                if (command.length != 2) {
+                    System.err.println("Parameter was not specified!");
+                    continue;
+                }
                 inspectValue(command[1]);
             } else if (command[0].equals("m")) {
                 if (command.length != 3) {
-                    System.err.println("Value was not specified!");
+                    System.err.println("Parameter and/or value was not specified!");
                     continue;
                 }
                 modifyValue(command[1], command[2]);
             } else if (command[0].equals("c")) {
+                if (command.length != 2) {
+                    System.err.println("Method was not specified!");
+                    continue;
+                }
                 callMethod(command[1], command);
             } else if (command[0].equals("a")) {
                 Boolean useLibrary = new Boolean(command[1]);
@@ -44,6 +52,16 @@ public class Inspector {
                 } else {
                     System.err.println("Using Stack Overflow solution");
                 }
+            } else if (command[0].equals("h")) {
+                System.err.println("Available commands:");
+                System.err
+                        .println("* a <value>: Changes if the Apache Commons Lang is used or not. Accepted values: true or false.");
+                System.err.println("* i <parameter>: Displays the current value of a parameter of the object being inspected.");
+                System.err.println("* m <parameter> <value>: Modified the value of a parameter of the object being inspected.");
+                System.err
+                        .println("* c <method> <parameters>: Calls the method <method> with parameters <parameters> on the object being inspected.");
+                System.err.println("* h: Displays the inspector help menu.");
+                System.err.println("* q: Quits the inspector.");
             } else {
                 System.err.println("Invalid command.");
             }
