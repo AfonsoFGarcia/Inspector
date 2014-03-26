@@ -82,7 +82,7 @@ public class Inspector {
                     return;
                 }
             }
-            if (inspectClass.getName().equals("java.lang.object")) {
+            if (inspectClass.getName().equals("java.lang.Object")) {
                 System.err.println("The method " + method + " does not exist in the inspected class.");
             } else {
                 callMethod(method, command, inspectClass.getSuperclass());
