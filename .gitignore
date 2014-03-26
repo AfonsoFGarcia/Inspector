@@ -1,7 +1,2 @@
-*.class
-
-# Package Files #
 inspector.jar
-*.war
-*.ear
-/bin
+classes/
