@@ -1,7 +1,7 @@
 *.class
 
 # Package Files #
-*.jar
+inspector.jar
 *.war
 *.ear
 /bin

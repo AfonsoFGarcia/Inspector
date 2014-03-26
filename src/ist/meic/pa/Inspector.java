@@ -1,5 +1,7 @@
 package ist.meic.pa;
 
+import ist.meic.pa.utils.PrimitiveWrapper;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -34,6 +36,14 @@ public class Inspector {
                 modifyValue(command[1], command[2]);
             } else if (command[0].equals("c")) {
                 callMethod(command[1], command);
+            } else if (command[0].equals("a")) {
+                Boolean useLibrary = new Boolean(command[1]);
+                PrimitiveWrapper.useApacheLibrary(useLibrary);
+                if (useLibrary) {
+                    System.err.println("Using Apache Commons Lang library");
+                } else {
+                    System.err.println("Using Stack Overflow solution");
+                }
             } else {
                 System.err.println("Invalid command.");
             }
@@ -98,10 +108,12 @@ public class Inspector {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
-        } else if (value.startsWith("0x")) {
-            return Byte.parseByte(value.substring(2, value.length()), 16);
         } else {
-            return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
+            try {
+                return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
+            } catch (NoSuchMethodException e) {
+                return PrimitiveWrapper.getWrapper(parameter).getConstructor(new Class[] { String.class }).newInstance(value);
+            }
         }
     }
 
