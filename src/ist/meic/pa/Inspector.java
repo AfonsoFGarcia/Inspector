@@ -85,6 +85,7 @@ public class Inspector {
     }
 
     private Object castValue(String value) {
+        value = value.replace(',', '.');
         if (value.startsWith("\"") && value.endsWith("\"")) {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
