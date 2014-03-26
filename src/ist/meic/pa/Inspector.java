@@ -71,44 +71,44 @@ public class Inspector {
         } catch (InvocationTargetException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
+        } catch (InstantiationException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
-    private Object[] castArguments(String[] command, Class<?>[] parameterTypes) {
+    private Object[] castArguments(String[] command, Class<?>[] parameterTypes) throws InstantiationException,
+            IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         Object[] ret = new Object[parameterTypes.length];
 
         for (int i = 0; i < parameterTypes.length; i++) {
-            ret[i] = castValue(command[i + 2]);
+            ret[i] = castValue(command[i + 2], parameterTypes[i]);
         }
 
         return ret;
     }
 
-    private Object castValue(String value) {
+    private Object castValue(String value, Class<?> parameter) throws InstantiationException, IllegalAccessException,
+            IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         value = value.replace(',', '.');
         if (value.startsWith("\"") && value.endsWith("\"")) {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
-        } else if (value.equals("true") || value.equals("false")) {
-            return new Boolean(value);
-        } else if (value.endsWith("L")) {
-            return Long.parseLong(value.substring(0, value.length() - 1));
-        } else if (value.endsWith("f")) {
-            return Float.parseFloat(value.substring(0, value.length() - 1));
-        } else if (value.endsWith("d")) {
-            return Double.parseDouble(value.substring(0, value.length() - 1));
         } else if (value.startsWith("0x")) {
             return Byte.parseByte(value.substring(2, value.length()), 16);
         } else {
-            return Integer.parseInt(value);
+            return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
         }
     }
 
     private void modifyValue(String parameter, String value) {
         try {
             Field classField = getField(parameter);
-            classField.set(inspectTarget, castValue(value));
+            classField.set(inspectTarget, castValue(value, classField.getType()));
             printObjectProperties();
         } catch (NoSuchFieldException e) {
             System.err.println("The class does not have the field " + parameter);
@@ -116,6 +116,18 @@ public class Inspector {
             System.err.println("The arguments passed do not match the declared type.");
         } catch (IllegalAccessException e) {
             System.err.println("");
+        } catch (InstantiationException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SecurityException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
