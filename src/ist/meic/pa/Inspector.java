@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 
 public class Inspector {
 
@@ -64,28 +65,57 @@ public class Inspector {
         }
     }
 
-    private void callMethod(String method, String[] command, Class<?> inspectClass) {
-        try {
-            Object ret = null;
+    private HashMap<Integer, Method> getMethods(String method, String[] command, Class<?> inspectClass, Integer index) {
+        if (inspectClass.getName().equals("java.lang.Object")) {
+            return new HashMap<Integer, Method>();
+        } else {
             Method[] mets = inspectClass.getDeclaredMethods();
+            HashMap<Integer, Method> methods = new HashMap<Integer, Method>();
 
             for (Method m : mets) {
                 if (m.getParameterTypes().length == command.length - 2 && m.getName().equals(method)) {
-                    Object[] args = castArguments(command, m.getParameterTypes());
-                    m.setAccessible(true);
-                    ret = m.invoke(inspectTarget, args);
-
-                    if (ret != null) {
-                        System.err.println(ret.toString());
-                    }
-
-                    return;
+                    methods.put(index++, m);
                 }
             }
-            if (inspectClass.getName().equals("java.lang.Object")) {
-                System.err.println("The method " + method + " does not exist in the inspected class.");
+            methods.putAll(getMethods(method, command, inspectClass.getSuperclass(), index));
+
+            return methods;
+        }
+    }
+
+    private void callMethod(String method, String[] command, Class<?> inspectClass) {
+        try {
+            Object ret = null;
+            HashMap<Integer, Method> methods = getMethods(method, command, inspectClass, 0);
+
+            if (methods.size() == 1) {
+                Object[] args = castArguments(command, methods.get(0).getParameterTypes());
+                methods.get(0).setAccessible(true);
+                ret = methods.get(0).invoke(inspectTarget, args);
+
+                if (ret != null) {
+                    System.err.println(ret.toString());
+                }
+            } else if (methods.size() > 1) {
+                System.err.println("Choose a method:");
+
+                Integer index = 0;
+                for (Method m : methods.values()) {
+                    System.err.println(index++ + ": " + m.toString());
+                }
+                System.err.print("> ");
+
+                String methodNum = System.console().readLine();
+
+                Object[] args = castArguments(command, methods.get(Integer.parseInt(methodNum)).getParameterTypes());
+                methods.get(Integer.parseInt(methodNum)).setAccessible(true);
+                ret = methods.get(Integer.parseInt(methodNum)).invoke(inspectTarget, args);
+
+                if (ret != null) {
+                    System.err.println(ret.toString());
+                }
             } else {
-                callMethod(method, command, inspectClass.getSuperclass());
+                System.err.println("The method " + method + " does not exist in the inspected class.");
             }
         } catch (SecurityException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
@@ -136,14 +166,23 @@ public class Inspector {
 
     private void modifyValue(String parameter, String value, Class<?> inspectClass) {
         try {
-            Field classField = getField(parameter, inspectClass);
-            classField.set(inspectTarget, castValue(value, classField.getType()));
-        } catch (NoSuchFieldException e) {
-            if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
-                modifyValue(parameter, value, inspectClass.getSuperclass());
+            HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
+            if (classFields.size() == 1) {
+                classFields.get(0).set(inspectTarget, castValue(value, classFields.get(0).getType()));
+            } else if (classFields.size() > 1) {
+                Integer index = 0;
+                for (Field f : classFields.values()) {
+                    System.err.print(index++ + ": ");
+                    printField(f.getDeclaringClass(), f);
+                }
+                System.err.print("> ");
+                Integer fieldValue = Integer.parseInt(System.console().readLine());
+                classFields.get(fieldValue).set(inspectTarget, castValue(value, classFields.get(fieldValue).getType()));
             } else {
-                System.err.println("The class does not have the field " + parameter);
+                throw new NoSuchFieldException();
             }
+        } catch (NoSuchFieldException e) {
+            System.err.println("The class does not have the field " + parameter);
             return;
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared type.");
@@ -174,11 +213,21 @@ public class Inspector {
 
     private void inspectValue(String parameter, Class<?> inspectClass) {
         try {
-            Field classField = getField(parameter, inspectClass);
-            System.err.print(Modifier.toString(classField.getModifiers()) + " ");
-            System.err.print(classField.getType().toString() + " ");
-            System.err.print(classField.getName() + " = ");
-            System.err.println(getFieldValue(classField));
+            HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
+            if (classFields.size() == 1) {
+                printField(classFields.get(0).getClass(), classFields.get(0));
+            } else if (classFields.size() > 1) {
+                Integer index = 0;
+                for (Field f : classFields.values()) {
+                    System.err.print(index++ + ": ");
+                    printField(f.getDeclaringClass(), f);
+                }
+                System.err.print("> ");
+                Integer fieldValue = Integer.parseInt(System.console().readLine());
+                printField(classFields.get(fieldValue).getDeclaringClass(), classFields.get(fieldValue));
+            } else {
+                throw new NoSuchFieldException();
+            }
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
                 inspectValue(parameter, inspectClass.getSuperclass());
@@ -198,11 +247,23 @@ public class Inspector {
         }
     }
 
-    private Field getField(String parameter, Class<?> inspectClass) throws NoSuchFieldException, SecurityException {
-        Field classField;
-        classField = inspectClass.getDeclaredField(parameter);
-        classField.setAccessible(true);
-        return classField;
+    private HashMap<Integer, Field> getFields(String parameter, Class<?> inspectClass, Integer index)
+            throws NoSuchFieldException, SecurityException {
+        if (inspectClass.getName().equals("java.lang.Object")) {
+            return new HashMap<Integer, Field>();
+        } else {
+            HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
+
+            for (Field f : inspectClass.getDeclaredFields()) {
+                if (f.getName().equals(parameter)) {
+                    fields.put(index++, f);
+                }
+            }
+
+            fields.putAll(getFields(parameter, inspectClass.getSuperclass(), index));
+
+            return fields;
+        }
     }
 
     private void printObjectProperties() {
@@ -211,8 +272,9 @@ public class Inspector {
             System.err.print(inspectTarget.toString() + " is an instance of class ");
             System.err.println(inspectClass.getName());
             System.err.println("----------");
-
             printFields(inspectClass);
+            System.err.println("----------");
+            printObjectMethods(inspectClass);
         } catch (IllegalArgumentException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
@@ -227,18 +289,34 @@ public class Inspector {
             Field[] classFields = inspectClass.getDeclaredFields();
 
             for (Field f : classFields) {
-                f.setAccessible(true);
-                System.err.print(Modifier.toString(f.getModifiers()) + " ");
-                System.err.print(f.getType().toString() + " ");
-                System.err.print(f.getName() + " = ");
-                System.err.println(getFieldValue(f));
+                printField(inspectClass, f);
             }
 
             inspectClass = inspectClass.getSuperclass();
         }
     }
 
+    private void printField(Class<?> inspectClass, Field f) throws IllegalAccessException {
+        f.setAccessible(true);
+        System.err.print(inspectClass.getSimpleName() + ": ");
+        System.err.print(Modifier.toString(f.getModifiers()) + " ");
+        System.err.print(f.getType().toString() + " ");
+        System.err.print(f.getName() + " = ");
+        System.err.println(getFieldValue(f));
+    }
+
     private String getFieldValue(Field f) throws IllegalArgumentException, IllegalAccessException {
         return f.get(inspectTarget).toString();
+    }
+
+    private void printObjectMethods(Class<?> inspectClass) {
+        if (inspectClass.getName().equals("java.lang.Object")) {
+            return;
+        } else {
+            for (Method m : inspectClass.getDeclaredMethods()) {
+                System.err.println(inspectClass.getSimpleName() + ": " + m.toString());
+            }
+            printObjectMethods(inspectClass.getSuperclass());
+        }
     }
 }
