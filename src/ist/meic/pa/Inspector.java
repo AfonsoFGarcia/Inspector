@@ -30,7 +30,7 @@ public class Inspector {
             } else if (command[0].equals("m") && command.length == 3) {
                 modifyValue(command[1], command[2], inspectTarget.getClass());
             } else if (command[0].equals("c") && command.length >= 2) {
-                callMethod(command[1], command);
+                callMethod(command[1], command, inspectTarget.getClass());
             } else if (command[0].equals("a") && command.length == 2) {
                 useApacheLibrary(command[1]);
             } else if (command[0].equals("h")) {
@@ -64,9 +64,8 @@ public class Inspector {
         }
     }
 
-    private void callMethod(String method, String[] command) {
+    private void callMethod(String method, String[] command, Class<?> inspectClass) {
         try {
-            Class<?> inspectClass = inspectTarget.getClass();
             Object ret = null;
             Method[] mets = inspectClass.getDeclaredMethods();
 
@@ -83,7 +82,11 @@ public class Inspector {
                     return;
                 }
             }
-            System.err.println("The method " + method + " does not exist in the inspected class.");
+            if (inspectClass.getName().equals("java.lang.object")) {
+                System.err.println("The method " + method + " does not exist in the inspected class.");
+            } else {
+                callMethod(method, command, inspectClass.getSuperclass());
+            }
         } catch (SecurityException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
