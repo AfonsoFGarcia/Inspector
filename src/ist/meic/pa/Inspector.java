@@ -10,7 +10,7 @@ import java.util.HashMap;
 
 public class Inspector {
 
-    Object inspectTarget;
+    private Object inspectTarget;
 
     public Inspector() {
     }
@@ -150,12 +150,15 @@ public class Inspector {
 
     private Object castValue(String value, Class<?> parameter) throws InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-        value = value.replace(',', '.');
         if (value.startsWith("\"") && value.endsWith("\"")) {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
         } else {
+            if (parameter.equals(Character.class) || parameter.equals(Character.TYPE) || parameter.equals(String.class)) {
+                throw new IllegalArgumentException();
+            }
+            value = value.replace(',', '.');
             try {
                 return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
             } catch (NoSuchMethodException e) {
