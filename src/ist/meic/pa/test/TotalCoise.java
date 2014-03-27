@@ -6,7 +6,7 @@ public class TotalCoise extends Coise {
     public Integer a;
 
     public TotalCoise(Integer a) {
-        super.a = a;
+        super.a = a.toString();
         this.a = a;
     }
 

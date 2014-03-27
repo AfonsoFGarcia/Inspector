@@ -10,7 +10,7 @@ import java.util.HashMap;
 
 public class Inspector {
 
-    Object inspectTarget;
+    private Object inspectTarget;
 
     public Inspector() {
     }
@@ -32,10 +32,6 @@ public class Inspector {
                 modifyValue(command[1], command[2], inspectTarget.getClass());
             } else if (command[0].equals("c") && command.length >= 2) {
                 callMethod(command[1], command, inspectTarget.getClass());
-            } else if (command[0].equals("a") && command.length == 2) {
-                useApacheLibrary(command[1]);
-            } else if (command[0].equals("h")) {
-                printHelp();
             } else if (command[0].equals("q")) {
                 return;
             } else {
@@ -44,29 +40,8 @@ public class Inspector {
         }
     }
 
-    private void printHelp() {
-        System.err.println("Available commands:");
-        System.err.println("* a <value>: Changes if the Apache Commons Lang is used or not. Accepted values: true or false.");
-        System.err.println("* i <parameter>: Displays the current value of a parameter of the object being inspected.");
-        System.err.println("* m <parameter> <value>: Modified the value of a parameter of the object being inspected.");
-        System.err
-                .println("* c <method> <parameters>: Calls the method <method> with parameters <parameters> on the object being inspected.");
-        System.err.println("* h: Displays the inspector help menu.");
-        System.err.println("* q: Quits the inspector.");
-    }
-
-    private void useApacheLibrary(String command) {
-        Boolean useLibrary = new Boolean(command);
-        PrimitiveWrapper.useApacheLibrary(useLibrary);
-        if (useLibrary) {
-            System.err.println("Using Apache Commons Lang library");
-        } else {
-            System.err.println("Using Stack Overflow solution");
-        }
-    }
-
     private HashMap<Integer, Method> getMethods(String method, String[] command, Class<?> inspectClass, Integer index) {
-        if (inspectClass.getName().equals("java.lang.Object")) {
+        if (inspectClass == null) {
             return new HashMap<Integer, Method>();
         } else {
             Method[] mets = inspectClass.getDeclaredMethods();
@@ -95,43 +70,36 @@ public class Inspector {
 
                 if (ret != null) {
                     System.err.println(ret.toString());
+                    if (!methods.get(0).getReturnType().isPrimitive()) {
+                        inspectTarget = ret;
+                        printObjectProperties();
+                    }
                 }
             } else if (methods.size() > 1) {
-                System.err.println("Choose a method:");
-
-                Integer index = 0;
                 for (Method m : methods.values()) {
-                    System.err.println(index++ + ": " + m.toString());
-                }
-                System.err.print("> ");
+                    try {
+                        Object[] args = castArguments(command, m.getParameterTypes());
+                        m.setAccessible(true);
+                        ret = m.invoke(inspectTarget, args);
 
-                String methodNum = System.console().readLine();
+                        if (ret != null) {
+                            System.err.println(ret.toString());
+                            if (!m.getReturnType().isPrimitive()) {
+                                inspectTarget = ret;
+                                printObjectProperties();
+                            }
+                        }
 
-                Object[] args = castArguments(command, methods.get(Integer.parseInt(methodNum)).getParameterTypes());
-                methods.get(Integer.parseInt(methodNum)).setAccessible(true);
-                ret = methods.get(Integer.parseInt(methodNum)).invoke(inspectTarget, args);
-
-                if (ret != null) {
-                    System.err.println(ret.toString());
+                        return;
+                    } catch (IllegalArgumentException e) {
+                    }
                 }
             } else {
                 System.err.println("The method " + method + " does not exist in the inspected class.");
             }
-        } catch (SecurityException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared types.");
-        } catch (InvocationTargetException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
@@ -150,17 +118,18 @@ public class Inspector {
 
     private Object castValue(String value, Class<?> parameter) throws InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-        value = value.replace(',', '.');
         if (value.startsWith("\"") && value.endsWith("\"")) {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
-        } else {
+        } else if (parameter.equals(Integer.class) || parameter.equals(Integer.TYPE)) {
             try {
                 return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
             } catch (NoSuchMethodException e) {
                 return PrimitiveWrapper.getWrapper(parameter).getConstructor(new Class[] { String.class }).newInstance(value);
             }
+        } else {
+            throw new IllegalArgumentException();
         }
     }
 
@@ -169,62 +138,53 @@ public class Inspector {
             HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
             if (classFields.size() == 1) {
                 classFields.get(0).set(inspectTarget, castValue(value, classFields.get(0).getType()));
+                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
             } else if (classFields.size() > 1) {
-                Integer index = 0;
-                for (Field f : classFields.values()) {
-                    System.err.print(index++ + ": ");
-                    printField(f.getDeclaringClass(), f);
+                System.err.println("Choose a field:");
+                Boolean incorrectValue = true;
+                Integer fieldValue = 0;
+                while (incorrectValue) {
+                    Integer index = 0;
+                    for (Field f : classFields.values()) {
+                        System.err.print(index++ + ": ");
+                        printField(f.getDeclaringClass(), f);
+                    }
+                    System.err.print("> ");
+                    fieldValue = Integer.parseInt(System.console().readLine());
+                    if (fieldValue >= classFields.size()) {
+                        System.err.println("Please select a correct value!");
+                    } else {
+                        incorrectValue = false;
+                    }
                 }
-                System.err.print("> ");
-                Integer fieldValue = Integer.parseInt(System.console().readLine());
                 classFields.get(fieldValue).set(inspectTarget, castValue(value, classFields.get(fieldValue).getType()));
+
             } else {
                 throw new NoSuchFieldException();
             }
         } catch (NoSuchFieldException e) {
-            System.err.println("The class does not have the field " + parameter);
-            return;
+            if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
+                modifyValue(parameter, value, inspectClass.getSuperclass());
+            } else {
+                System.err.println("The class does not have the field " + parameter);
+            }
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared type.");
-            return;
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
-            return;
-        } catch (InstantiationException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (InvocationTargetException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (NoSuchMethodException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (SecurityException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
         }
-        printObjectProperties();
     }
 
     private void inspectValue(String parameter, Class<?> inspectClass) {
         try {
             HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
             if (classFields.size() == 1) {
-                printField(classFields.get(0).getClass(), classFields.get(0));
+                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
             } else if (classFields.size() > 1) {
-                Integer index = 0;
                 for (Field f : classFields.values()) {
-                    System.err.print(index++ + ": ");
                     printField(f.getDeclaringClass(), f);
                 }
-                System.err.print("> ");
-                Integer fieldValue = Integer.parseInt(System.console().readLine());
-                printField(classFields.get(fieldValue).getDeclaringClass(), classFields.get(fieldValue));
             } else {
                 throw new NoSuchFieldException();
             }
@@ -234,54 +194,81 @@ public class Inspector {
             } else {
                 System.err.println("The class does not have the field " + parameter);
             }
-            return;
-        } catch (SecurityException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            return;
-        } catch (IllegalArgumentException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
         }
     }
 
     private HashMap<Integer, Field> getFields(String parameter, Class<?> inspectClass, Integer index)
             throws NoSuchFieldException, SecurityException {
-        if (inspectClass.getName().equals("java.lang.Object")) {
-            return new HashMap<Integer, Field>();
-        } else {
-            HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
+        HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
 
-            for (Field f : inspectClass.getDeclaredFields()) {
-                if (f.getName().equals(parameter)) {
-                    fields.put(index++, f);
-                }
+        for (Field f : inspectClass.getDeclaredFields()) {
+            if (f.getName().equals(parameter)) {
+                fields.put(index++, f);
             }
-
-            fields.putAll(getFields(parameter, inspectClass.getSuperclass(), index));
-
-            return fields;
         }
+
+        return fields;
     }
 
     private void printObjectProperties() {
-        Class<?> inspectClass = inspectTarget.getClass();
         try {
+            Class<?> inspectClass = inspectTarget.getClass();
+            System.err.println("-----   CLASS    -----");
             System.err.print(inspectTarget.toString() + " is an instance of class ");
             System.err.println(inspectClass.getName());
-            System.err.println("----------");
+            printSuperClasses();
+            printInterfaces();
+            System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
-            System.err.println("----------");
+            System.err.println("-----  METHODS   -----");
             printObjectMethods(inspectClass);
-        } catch (IllegalArgumentException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+            System.err.println("----------------------");
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
+    }
+
+    private void printSuperClasses() {
+        HashMap<Class<?>, Class<?>> superClasses = getSuperClasses(inspectTarget.getClass());
+        if (superClasses.size() > 0) {
+            System.err.println("----- SUPER CLASS ----");
+            for (Class<?> c : superClasses.values()) {
+                System.err.println(c.getName());
+            }
+        }
+    }
+
+    private HashMap<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
+        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
+        if (!inspectClass.getName().equals("java.lang.Object")) {
+            returnMap.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
+            returnMap.putAll(getSuperClasses(inspectClass.getSuperclass()));
+        }
+        return returnMap;
+    }
+
+    private void printInterfaces() {
+        HashMap<Class<?>, Class<?>> interfaces = getInterfaces(inspectTarget.getClass());
+        if (interfaces.size() > 0) {
+            System.err.println("----- INTERFACES -----");
+            for (Class<?> i : interfaces.values()) {
+                System.err.println(i.getName());
+            }
+        }
+    }
+
+    private HashMap<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
+        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
+        if (!inspectClass.getName().equals("java.lang.Object")) {
+            for (Class<?> i : inspectClass.getInterfaces()) {
+                returnMap.put(i, i);
+            }
+            returnMap.putAll(getInterfaces(inspectClass.getSuperclass()));
+        }
+        return returnMap;
     }
 
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
