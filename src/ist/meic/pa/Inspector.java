@@ -272,12 +272,14 @@ public class Inspector {
     private void printObjectProperties() {
         Class<?> inspectClass = inspectTarget.getClass();
         try {
+            System.err.println("-----   CLASS    -----");
             System.err.print(inspectTarget.toString() + " is an instance of class ");
             System.err.println(inspectClass.getName());
-            System.err.println("----------");
+            System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
-            System.err.println("----------");
+            System.err.println("-----  METHODS   -----");
             printObjectMethods(inspectClass);
+            System.err.println("----------------------");
         } catch (IllegalArgumentException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
