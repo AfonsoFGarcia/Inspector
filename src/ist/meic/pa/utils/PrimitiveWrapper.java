@@ -1,43 +1,32 @@
 package ist.meic.pa.utils;
 
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * PrimitiveWrapper obtains the object type equivalent to the primitive type in java.<br>
  * <br>
- * It uses one of two ways:<br>
- * <ul>
- * <li>The Apache Commons Lang library</li>
- * <li>The solution proposed at <a href="http://stackoverflow.com/a/3474206">http://stackoverflow.com/a/3474206</a></li>
- * </ul>
- * <br>
- * <br>
- * This solution is pending approval by the professors.
+ * It uses source code removed from the Apache Commons Lang Library, in the class org.apache.commons.lang3.ClassUtils.
  */
 public class PrimitiveWrapper {
-    private final static HashMap<Class<?>, Class<?>> typeConverter = new HashMap<Class<?>, Class<?>>();
-    private static boolean useLibrary = false;
-
+    private static final Map<Class<?>, Class<?>> primitiveWrapperMap = new HashMap<Class<?>, Class<?>>();
     static {
-        typeConverter.put(boolean.class, Boolean.class);
-        typeConverter.put(short.class, Short.class);
-        typeConverter.put(int.class, Integer.class);
-        typeConverter.put(long.class, Long.class);
-        typeConverter.put(float.class, Float.class);
-        typeConverter.put(double.class, Double.class);
-        typeConverter.put(byte.class, Byte.class);
-    }
-
-    public static void useApacheLibrary(boolean u) {
-        useLibrary = u;
+        primitiveWrapperMap.put(Boolean.TYPE, Boolean.class);
+        primitiveWrapperMap.put(Byte.TYPE, Byte.class);
+        primitiveWrapperMap.put(Character.TYPE, Character.class);
+        primitiveWrapperMap.put(Short.TYPE, Short.class);
+        primitiveWrapperMap.put(Integer.TYPE, Integer.class);
+        primitiveWrapperMap.put(Long.TYPE, Long.class);
+        primitiveWrapperMap.put(Double.TYPE, Double.class);
+        primitiveWrapperMap.put(Float.TYPE, Float.class);
+        primitiveWrapperMap.put(Void.TYPE, Void.TYPE);
     }
 
     public static Class<?> getWrapper(Class<?> type) {
-        if (useLibrary) {
-            return org.apache.commons.lang3.ClassUtils.primitiveToWrapper(type);
-        } else {
-            return typeConverter.get(type);
+        Class<?> convertedClass = type;
+        if (type != null && type.isPrimitive()) {
+            convertedClass = primitiveWrapperMap.get(type);
         }
+        return convertedClass;
     }
-
 }

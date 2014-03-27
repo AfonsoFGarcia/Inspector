@@ -17,7 +17,7 @@ public class Inspector {
 
     public void inspect(Object target) {
         inspectTarget = target;
-        printObjectProperties(true);
+        printObjectProperties();
         readCommands();
     }
 
@@ -32,36 +32,11 @@ public class Inspector {
                 modifyValue(command[1], command[2], inspectTarget.getClass());
             } else if (command[0].equals("c") && command.length >= 2) {
                 callMethod(command[1], command, inspectTarget.getClass());
-            } else if (command[0].equals("a") && command.length == 2) {
-                useApacheLibrary(command[1]);
-            } else if (command[0].equals("h")) {
-                printHelp();
             } else if (command[0].equals("q")) {
                 return;
             } else {
                 System.err.println("Invalid command.");
             }
-        }
-    }
-
-    private void printHelp() {
-        System.err.println("Available commands:");
-        System.err.println("* a <value>: Changes if the Apache Commons Lang is used or not. Accepted values: true or false.");
-        System.err.println("* i <parameter>: Displays the current value of a parameter of the object being inspected.");
-        System.err.println("* m <parameter> <value>: Modified the value of a parameter of the object being inspected.");
-        System.err
-                .println("* c <method> <parameters>: Calls the method <method> with parameters <parameters> on the object being inspected.");
-        System.err.println("* h: Displays the inspector help menu.");
-        System.err.println("* q: Quits the inspector.");
-    }
-
-    private void useApacheLibrary(String command) {
-        Boolean useLibrary = new Boolean(command);
-        PrimitiveWrapper.useApacheLibrary(useLibrary);
-        if (useLibrary) {
-            System.err.println("Using Apache Commons Lang library");
-        } else {
-            System.err.println("Using Stack Overflow solution");
         }
     }
 
@@ -95,31 +70,29 @@ public class Inspector {
 
                 if (ret != null) {
                     System.err.println(ret.toString());
+                    if (!methods.get(0).getReturnType().isPrimitive()) {
+                        inspectTarget = ret;
+                        printObjectProperties();
+                    }
                 }
             } else if (methods.size() > 1) {
-                System.err.println("Choose a method:");
-                Boolean incorrectValue = true;
-                Integer methodNum = 0;
+                for (Method m : methods.values()) {
+                    try {
+                        Object[] args = castArguments(command, m.getParameterTypes());
+                        m.setAccessible(true);
+                        ret = m.invoke(inspectTarget, args);
 
-                while (incorrectValue) {
-                    Integer index = 0;
-                    for (Method m : methods.values()) {
-                        System.err.println(index++ + ": " + m.toString());
-                    }
-                    System.err.print("> ");
-                    methodNum = Integer.parseInt(System.console().readLine());
-                    if (methodNum >= methods.size()) {
-                        System.err.println("Please select a correct value!");
-                    } else {
-                        incorrectValue = false;
-                    }
-                }
-                Object[] args = castArguments(command, methods.get(methodNum).getParameterTypes());
-                methods.get(methodNum).setAccessible(true);
-                ret = methods.get(methodNum).invoke(inspectTarget, args);
+                        if (ret != null) {
+                            System.err.println(ret.toString());
+                            if (!m.getReturnType().isPrimitive()) {
+                                inspectTarget = ret;
+                                printObjectProperties();
+                            }
+                        }
 
-                if (ret != null) {
-                    System.err.println(ret.toString());
+                        return;
+                    } catch (IllegalArgumentException e) {
+                    }
                 }
             } else {
                 System.err.println("The method " + method + " does not exist in the inspected class.");
@@ -149,16 +122,14 @@ public class Inspector {
             return value.substring(1, value.length() - 1);
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
-        } else {
-            if (parameter.equals(Character.class) || parameter.equals(Character.TYPE) || parameter.equals(String.class)) {
-                throw new IllegalArgumentException();
-            }
-            value = value.replace(',', '.');
+        } else if (parameter.equals(Integer.class) || parameter.equals(Integer.TYPE)) {
             try {
                 return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
             } catch (NoSuchMethodException e) {
                 return PrimitiveWrapper.getWrapper(parameter).getConstructor(new Class[] { String.class }).newInstance(value);
             }
+        } else {
+            throw new IllegalArgumentException();
         }
     }
 
@@ -167,6 +138,7 @@ public class Inspector {
             HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
             if (classFields.size() == 1) {
                 classFields.get(0).set(inspectTarget, castValue(value, classFields.get(0).getType()));
+                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
             } else if (classFields.size() > 1) {
                 System.err.println("Choose a field:");
                 Boolean incorrectValue = true;
@@ -186,12 +158,16 @@ public class Inspector {
                     }
                 }
                 classFields.get(fieldValue).set(inspectTarget, castValue(value, classFields.get(fieldValue).getType()));
+
             } else {
                 throw new NoSuchFieldException();
             }
-            printObjectProperties();
         } catch (NoSuchFieldException e) {
-            System.err.println("The class does not have the field " + parameter);
+            if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
+                modifyValue(parameter, value, inspectClass.getSuperclass());
+            } else {
+                System.err.println("The class does not have the field " + parameter);
+            }
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared type.");
         } catch (Exception e) {
@@ -204,7 +180,7 @@ public class Inspector {
         try {
             HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
             if (classFields.size() == 1) {
-                printField(classFields.get(0).getClass(), classFields.get(0));
+                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
             } else if (classFields.size() > 1) {
                 for (Field f : classFields.values()) {
                     printField(f.getDeclaringClass(), f);
@@ -225,43 +201,29 @@ public class Inspector {
 
     private HashMap<Integer, Field> getFields(String parameter, Class<?> inspectClass, Integer index)
             throws NoSuchFieldException, SecurityException {
-        if (inspectClass.getName().equals("java.lang.Object")) {
-            return new HashMap<Integer, Field>();
-        } else {
-            HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
+        HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
 
-            for (Field f : inspectClass.getDeclaredFields()) {
-                if (f.getName().equals(parameter)) {
-                    fields.put(index++, f);
-                }
+        for (Field f : inspectClass.getDeclaredFields()) {
+            if (f.getName().equals(parameter)) {
+                fields.put(index++, f);
             }
-
-            fields.putAll(getFields(parameter, inspectClass.getSuperclass(), index));
-
-            return fields;
         }
+
+        return fields;
     }
 
     private void printObjectProperties() {
-        printObjectProperties(false);
-    }
-
-    private void printObjectProperties(Boolean all) {
         try {
             Class<?> inspectClass = inspectTarget.getClass();
-            if (all) {
-                System.err.println("-----   CLASS    -----");
-                System.err.print(inspectTarget.toString() + " is an instance of class ");
-                System.err.println(inspectClass.getName());
-                printSuperClasses();
-                printInterfaces();
-            }
+            System.err.println("-----   CLASS    -----");
+            System.err.print(inspectTarget.toString() + " is an instance of class ");
+            System.err.println(inspectClass.getName());
+            printSuperClasses();
+            printInterfaces();
             System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
-            if (all) {
-                System.err.println("-----  METHODS   -----");
-                printObjectMethods(inspectClass);
-            }
+            System.err.println("-----  METHODS   -----");
+            printObjectMethods(inspectClass);
             System.err.println("----------------------");
         } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
