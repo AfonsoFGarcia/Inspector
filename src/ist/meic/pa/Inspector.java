@@ -98,18 +98,25 @@ public class Inspector {
                 }
             } else if (methods.size() > 1) {
                 System.err.println("Choose a method:");
+                Boolean incorrectValue = true;
+                Integer methodNum = 0;
 
-                Integer index = 0;
-                for (Method m : methods.values()) {
-                    System.err.println(index++ + ": " + m.toString());
+                while (incorrectValue) {
+                    Integer index = 0;
+                    for (Method m : methods.values()) {
+                        System.err.println(index++ + ": " + m.toString());
+                    }
+                    System.err.print("> ");
+                    methodNum = Integer.parseInt(System.console().readLine());
+                    if (methodNum >= methods.size()) {
+                        System.err.println("Please select a correct value!");
+                    } else {
+                        incorrectValue = false;
+                    }
                 }
-                System.err.print("> ");
-
-                String methodNum = System.console().readLine();
-
-                Object[] args = castArguments(command, methods.get(Integer.parseInt(methodNum)).getParameterTypes());
-                methods.get(Integer.parseInt(methodNum)).setAccessible(true);
-                ret = methods.get(Integer.parseInt(methodNum)).invoke(inspectTarget, args);
+                Object[] args = castArguments(command, methods.get(methodNum).getParameterTypes());
+                methods.get(methodNum).setAccessible(true);
+                ret = methods.get(methodNum).invoke(inspectTarget, args);
 
                 if (ret != null) {
                     System.err.println(ret.toString());
@@ -117,21 +124,9 @@ public class Inspector {
             } else {
                 System.err.println("The method " + method + " does not exist in the inspected class.");
             }
-        } catch (SecurityException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared types.");
-        } catch (InvocationTargetException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
@@ -173,45 +168,36 @@ public class Inspector {
             if (classFields.size() == 1) {
                 classFields.get(0).set(inspectTarget, castValue(value, classFields.get(0).getType()));
             } else if (classFields.size() > 1) {
-                Integer index = 0;
-                for (Field f : classFields.values()) {
-                    System.err.print(index++ + ": ");
-                    printField(f.getDeclaringClass(), f);
+                System.err.println("Choose a field:");
+                Boolean incorrectValue = true;
+                Integer fieldValue = 0;
+                while (incorrectValue) {
+                    Integer index = 0;
+                    for (Field f : classFields.values()) {
+                        System.err.print(index++ + ": ");
+                        printField(f.getDeclaringClass(), f);
+                    }
+                    System.err.print("> ");
+                    fieldValue = Integer.parseInt(System.console().readLine());
+                    if (fieldValue >= classFields.size()) {
+                        System.err.println("Please select a correct value!");
+                    } else {
+                        incorrectValue = false;
+                    }
                 }
-                System.err.print("> ");
-                Integer fieldValue = Integer.parseInt(System.console().readLine());
                 classFields.get(fieldValue).set(inspectTarget, castValue(value, classFields.get(fieldValue).getType()));
             } else {
                 throw new NoSuchFieldException();
             }
+            printObjectProperties();
         } catch (NoSuchFieldException e) {
             System.err.println("The class does not have the field " + parameter);
-            return;
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared type.");
-            return;
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
-            return;
-        } catch (InstantiationException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (InvocationTargetException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (NoSuchMethodException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
-        } catch (SecurityException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-            return;
         }
-        printObjectProperties();
     }
 
     private void inspectValue(String parameter, Class<?> inspectClass) {
@@ -220,14 +206,9 @@ public class Inspector {
             if (classFields.size() == 1) {
                 printField(classFields.get(0).getClass(), classFields.get(0));
             } else if (classFields.size() > 1) {
-                Integer index = 0;
                 for (Field f : classFields.values()) {
-                    System.err.print(index++ + ": ");
                     printField(f.getDeclaringClass(), f);
                 }
-                System.err.print("> ");
-                Integer fieldValue = Integer.parseInt(System.console().readLine());
-                printField(classFields.get(fieldValue).getDeclaringClass(), classFields.get(fieldValue));
             } else {
                 throw new NoSuchFieldException();
             }
@@ -237,16 +218,8 @@ public class Inspector {
             } else {
                 System.err.println("The class does not have the field " + parameter);
             }
-            return;
-        } catch (SecurityException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            return;
-        } catch (IllegalArgumentException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
         }
     }
 
@@ -274,8 +247,8 @@ public class Inspector {
     }
 
     private void printObjectProperties(Boolean all) {
-        Class<?> inspectClass = inspectTarget.getClass();
         try {
+            Class<?> inspectClass = inspectTarget.getClass();
             if (all) {
                 System.err.println("-----   CLASS    -----");
                 System.err.print(inspectTarget.toString() + " is an instance of class ");
@@ -290,10 +263,7 @@ public class Inspector {
                 printObjectMethods(inspectClass);
             }
             System.err.println("----------------------");
-        } catch (IllegalArgumentException e) {
-            System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
