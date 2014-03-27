@@ -17,7 +17,7 @@ public class Inspector {
 
     public void inspect(Object target) {
         inspectTarget = target;
-        printObjectProperties();
+        printObjectProperties(true);
         readCommands();
     }
 
@@ -66,7 +66,7 @@ public class Inspector {
     }
 
     private HashMap<Integer, Method> getMethods(String method, String[] command, Class<?> inspectClass, Integer index) {
-        if (inspectClass.getName().equals("java.lang.Object")) {
+        if (inspectClass == null) {
             return new HashMap<Integer, Method>();
         } else {
             Method[] mets = inspectClass.getDeclaredMethods();
@@ -270,17 +270,25 @@ public class Inspector {
     }
 
     private void printObjectProperties() {
+        printObjectProperties(false);
+    }
+
+    private void printObjectProperties(Boolean all) {
         Class<?> inspectClass = inspectTarget.getClass();
         try {
-            System.err.println("-----   CLASS    -----");
-            System.err.print(inspectTarget.toString() + " is an instance of class ");
-            System.err.println(inspectClass.getName());
-            printSuperClasses();
-            printInterfaces();
+            if (all) {
+                System.err.println("-----   CLASS    -----");
+                System.err.print(inspectTarget.toString() + " is an instance of class ");
+                System.err.println(inspectClass.getName());
+                printSuperClasses();
+                printInterfaces();
+            }
             System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
-            System.err.println("-----  METHODS   -----");
-            printObjectMethods(inspectClass);
+            if (all) {
+                System.err.println("-----  METHODS   -----");
+                printObjectMethods(inspectClass);
+            }
             System.err.println("----------------------");
         } catch (IllegalArgumentException e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
