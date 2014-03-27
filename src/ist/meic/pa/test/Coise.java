@@ -1,6 +1,6 @@
 package ist.meic.pa.test;
 
-public class Coise {
+public class Coise implements InterCoise {
     public Integer a;
     public String b;
 
@@ -14,6 +14,7 @@ public class Coise {
         return x + y + z;
     }
 
+    @Override
     public void escreveCoisas(int i, String s, char c, boolean t, long l, float f, double d, byte b) {
         System.out.println(i + " " + s + " " + c + " " + t);
         System.out.println(l + " " + f + " " + d + " " + b);

@@ -275,6 +275,8 @@ public class Inspector {
             System.err.println("-----   CLASS    -----");
             System.err.print(inspectTarget.toString() + " is an instance of class ");
             System.err.println(inspectClass.getName());
+            printSuperClasses();
+            printInterfaces();
             System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
             System.err.println("-----  METHODS   -----");
@@ -287,6 +289,46 @@ public class Inspector {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
+    }
+
+    private void printSuperClasses() {
+        HashMap<Class<?>, Class<?>> superClasses = getSuperClasses(inspectTarget.getClass());
+        if (superClasses.size() > 0) {
+            System.err.println("----- SUPER CLASS ----");
+            for (Class<?> c : superClasses.values()) {
+                System.err.println(c.getName());
+            }
+        }
+    }
+
+    private HashMap<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
+        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
+        if (!inspectClass.getName().equals("java.lang.Object")) {
+            returnMap.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
+            returnMap.putAll(getSuperClasses(inspectClass.getSuperclass()));
+        }
+        return returnMap;
+    }
+
+    private void printInterfaces() {
+        HashMap<Class<?>, Class<?>> interfaces = getInterfaces(inspectTarget.getClass());
+        if (interfaces.size() > 0) {
+            System.err.println("----- INTERFACES -----");
+            for (Class<?> i : interfaces.values()) {
+                System.err.println(i.getName());
+            }
+        }
+    }
+
+    private HashMap<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
+        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
+        if (!inspectClass.getName().equals("java.lang.Object")) {
+            for (Class<?> i : inspectClass.getInterfaces()) {
+                returnMap.put(i, i);
+            }
+            returnMap.putAll(getInterfaces(inspectClass.getSuperclass()));
+        }
+        return returnMap;
     }
 
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
