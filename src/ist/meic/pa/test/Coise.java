@@ -10,8 +10,8 @@ public class Coise implements InterCoise {
     }
 
     @SuppressWarnings("unused")
-    private String somaTodos(int x, int y, int z) {
-        return new Integer(x + y + z).toString();
+    private int somaTodos(int x, int y, int z) {
+        return x + y + z;
     }
 
     @Override

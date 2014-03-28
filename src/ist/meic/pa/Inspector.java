@@ -14,17 +14,19 @@ import java.util.Map;
 public class Inspector {
 
     private Object inspectTarget;
+    private boolean fullInspector;
 
     public Inspector() {
     }
 
     public void inspect(Object target) {
-        setObject(target);
+        setObject(target, target.getClass().isPrimitive() ? false : true);
         readCommands();
     }
 
-    private void setObject(Object target) {
+    private void setObject(Object target, boolean fI) {
         inspectTarget = target;
+        fullInspector = fI;
         printObjectProperties();
     }
 
@@ -33,11 +35,11 @@ public class Inspector {
             System.err.print("> ");
             String[] command = System.console().readLine().split(" ");
 
-            if (command[0].equals("i") && command.length == 2) {
+            if (command[0].equals("i") && command.length == 2 && fullInspector) {
                 inspectValue(command[1], inspectTarget.getClass());
-            } else if (command[0].equals("m") && command.length == 3) {
+            } else if (command[0].equals("m") && command.length == 3 && fullInspector) {
                 modifyValue(command[1], command[2], inspectTarget.getClass());
-            } else if (command[0].equals("c") && command.length >= 2) {
+            } else if (command[0].equals("c") && command.length >= 2 && fullInspector) {
                 callMethod(command[1], command, inspectTarget.getClass());
             } else if (command[0].equals("q")) {
                 return;
@@ -67,36 +69,16 @@ public class Inspector {
 
     private void callMethod(String method, String[] command, Class<?> inspectClass) {
         try {
-            Object ret = null;
             List<Method> methods = getMethods(method, command, inspectClass);
-
             if (methods.size() == 1) {
-                Object[] args = castArguments(command, methods.get(0).getParameterTypes());
-                methods.get(0).setAccessible(true);
-                ret = methods.get(0).invoke(inspectTarget, args);
-
-                if (ret != null) {
-                    System.err.println(ret.toString());
-                    if (!methods.get(0).getReturnType().isPrimitive()) {
-                        setObject(ret);
-                    }
-                }
+                callMethod(command, methods.get(0));
             } else if (methods.size() > 1) {
                 for (Method m : methods) {
                     try {
-                        Object[] args = castArguments(command, m.getParameterTypes());
-                        m.setAccessible(true);
-                        ret = m.invoke(inspectTarget, args);
-
-                        if (ret != null) {
-                            System.err.println(ret.toString());
-                            if (!m.getReturnType().isPrimitive()) {
-                                setObject(ret);
-                            }
-                        }
-
+                        callMethod(command, m);
                         return;
                     } catch (IllegalArgumentException e) {
+                        continue;
                     }
                 }
             } else {
@@ -107,6 +89,19 @@ public class Inspector {
         } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
+        }
+    }
+
+    private void callMethod(String[] command, Method m) throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException {
+        Object ret;
+        Object[] args = castArguments(command, m.getParameterTypes());
+        m.setAccessible(true);
+        ret = m.invoke(inspectTarget, args);
+
+        if (ret != null) {
+            System.err.println(ret.toString());
+            setObject(ret, !m.getReturnType().isPrimitive());
         }
     }
 
@@ -161,7 +156,7 @@ public class Inspector {
         try {
             Field classField = getField(parameter, inspectClass);
             printField(classField.getDeclaringClass(), classField);
-            setObject(classField.get(inspectTarget));
+            setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive());
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
                 inspectValue(parameter, inspectClass.getSuperclass());
@@ -188,10 +183,12 @@ public class Inspector {
             System.err.println("-----   CLASS    -----");
             System.err.print(inspectTarget.toString() + " is an instance of class ");
             System.err.println(inspectClass.getName());
-            printSuperClasses();
-            printInterfaces();
-            printFields(inspectClass);
-            printObjectMethods(inspectClass);
+            if (fullInspector) {
+                printSuperClasses();
+                printInterfaces();
+                printFields(inspectClass);
+                printObjectMethods(inspectClass);
+            }
             System.err.println("----------------------");
         } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
