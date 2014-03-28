@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,7 +136,7 @@ public class Inspector {
         try {
             Field classField = getField(parameter, inspectClass);
             classField.set(inspectTarget, castValue(value, classField.getType()));
-            printField(classField.getDeclaringClass(), classField);
+            printField(classField);
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().equals(Object.class))) {
                 modifyValue(parameter, value, inspectClass.getSuperclass());
@@ -153,7 +154,7 @@ public class Inspector {
     private void inspectValue(String parameter, Class<?> inspectClass) {
         try {
             Field classField = getField(parameter, inspectClass);
-            printField(classField.getDeclaringClass(), classField);
+            printField(classField);
             setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive());
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().equals(Object.class))) {
@@ -232,17 +233,27 @@ public class Inspector {
 
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
         System.err.println("----- PARAMETERS -----");
-        while (!inspectClass.equals(Object.class)) {
-            for (Field f : inspectClass.getDeclaredFields()) {
-                printField(inspectClass, f);
-            }
-            inspectClass = inspectClass.getSuperclass();
+        for (Field f : getFields()) {
+            printField(f);
         }
     }
 
-    private void printField(Class<?> inspectClass, Field f) throws IllegalAccessException {
+    private Collection<Field> getFields() {
+        Class<?> inspectClass = inspectTarget.getClass();
+        HashMap<String, Field> fields = new HashMap<String, Field>();
+        while (!inspectClass.equals(Object.class)) {
+            for (Field f : inspectClass.getDeclaredFields()) {
+                if (!fields.containsKey(f.getName())) {
+                    fields.put(f.getName(), f);
+                }
+            }
+            inspectClass = inspectClass.getSuperclass();
+        }
+        return fields.values();
+    }
+
+    private void printField(Field f) throws IllegalAccessException {
         f.setAccessible(true);
-        System.err.print(inspectClass.getSimpleName() + ": ");
         System.err.print(Modifier.toString(f.getModifiers()) + " ");
         System.err.print(f.getType().toString() + " ");
         System.err.print(f.getName() + " = ");
@@ -253,7 +264,7 @@ public class Inspector {
         System.err.println("-----  METHODS   -----");
         while (!inspectClass.equals(Object.class)) {
             for (Method m : inspectClass.getDeclaredMethods()) {
-                System.err.println(inspectClass.getSimpleName() + ": " + m.toString());
+                System.err.println(m.toString());
             }
             inspectClass = inspectClass.getSuperclass();
         }
