@@ -23,4 +23,9 @@ public class TotalCoise extends Coise {
     public void setC(String s) {
         this.c = Boolean.parseBoolean(s);
     }
+
+    @Override
+    public void escreveCoisas(int i, String s, char c) {
+        System.out.println(c + " " + s + " " + i);
+    }
 }

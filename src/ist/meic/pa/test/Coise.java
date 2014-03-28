@@ -15,8 +15,7 @@ public class Coise implements InterCoise {
     }
 
     @Override
-    public void escreveCoisas(int i, String s, char c, boolean t, long l, float f, double d, byte b) {
-        System.out.println(i + " " + s + " " + c + " " + t);
-        System.out.println(l + " " + f + " " + d + " " + b);
+    public void escreveCoisas(int i, String s, char c) {
+        System.out.println(i + " " + s + " " + c);
     }
 }
