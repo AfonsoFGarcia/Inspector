@@ -7,17 +7,14 @@
 	    <mkdir dir="classes" />
 	</target>
 	<target name ="compile" description="Compiles the classes" depends="init">
-		<javac srcdir="src" destdir="classes" includeantruntime="false">
-			<classpath refid="classpath" />
-		</javac>
+		<javac srcdir="src" destdir="classes" includeantruntime="false" />
 	</target>
 	<target name="jar" depends="compile" description="Creates the project jar">
-			<jar destfile="inspector.jar" basedir="classes">
-				<zipgroupfileset dir="lib" includes="*.jar" excludes=""/>
-			</jar>
+			<jar destfile="inspector.jar" basedir="classes" />
 		</target>
 	<target name ="clean" description="Deletes the compiled classes">
 		<delete dir="classes" />
+		<delete file="inspector.jar" />
 	</target>
 	<target name="test" description="Target for building in Travis-CI" depends="compile" />
 </project>
