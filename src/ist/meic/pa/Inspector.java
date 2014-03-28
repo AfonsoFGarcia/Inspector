@@ -14,18 +14,20 @@ import java.util.Map;
 public class Inspector {
 
     private Object inspectTarget;
+    private Class<?> inspectClass;
     private boolean fullInspector;
 
     public Inspector() {
     }
 
     public void inspect(Object target) {
-        setObject(target, target.getClass().isPrimitive() ? false : true);
+        setObject(target, target.getClass().isPrimitive() ? false : true, target.getClass());
         readCommands();
     }
 
-    private void setObject(Object target, boolean fI) {
+    private void setObject(Object target, boolean fI, Class<?> cI) {
         inspectTarget = target;
+        inspectClass = cI;
         fullInspector = fI;
         printObjectProperties();
     }
@@ -99,7 +101,7 @@ public class Inspector {
 
         if (ret != null) {
             System.err.println(ret.toString());
-            setObject(ret, !m.getReturnType().isPrimitive());
+            setObject(ret, !m.getReturnType().isPrimitive(), m.getReturnType());
         }
     }
 
@@ -154,7 +156,7 @@ public class Inspector {
         try {
             Field classField = getField(parameter, inspectClass);
             printField(classField);
-            setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive());
+            setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive(), classField.getClass());
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().equals(Object.class))) {
                 inspectValue(parameter, inspectClass.getSuperclass());
@@ -192,7 +194,6 @@ public class Inspector {
     }
 
     private void printClass() {
-        Class<?> inspectClass = inspectTarget.getClass();
         System.err.println("-----   CLASS    -----");
         System.err.print(inspectTarget.toString() + " is an instance of class ");
         System.err.println(inspectClass.getName());
