@@ -322,7 +322,8 @@ public class Inspector {
 		System.err.print(Modifier.toString(f.getModifiers()) + " ");
 		System.err.print(f.getType().toString() + " ");
 		System.err.print(f.getName() + " = ");
-		System.err.println(f.get(inspectTarget).toString());
+		Object value = f.get(inspectTarget);
+		System.err.println(value == null ? "null" : value.toString());
 	}
 
 	private void printObjectMethods() {
