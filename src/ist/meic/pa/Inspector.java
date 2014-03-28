@@ -208,9 +208,9 @@ public class Inspector {
 
     private Map<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
         HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
-        if (!inspectClass.getName().equals("java.lang.Object")) {
+        while (!inspectClass.equals(Object.class)) {
             returnMap.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
-            returnMap.putAll(getSuperClasses(inspectClass.getSuperclass()));
+            inspectClass = inspectClass.getSuperclass();
         }
         return returnMap;
     }
@@ -227,18 +227,17 @@ public class Inspector {
 
     private Map<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
         HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
-        if (!inspectClass.getName().equals("java.lang.Object")) {
+        while (!inspectClass.equals(Object.class)) {
             for (Class<?> i : inspectClass.getInterfaces()) {
                 returnMap.put(i, i);
             }
-            returnMap.putAll(getInterfaces(inspectClass.getSuperclass()));
+            inspectClass = inspectClass.getSuperclass();
         }
         return returnMap;
     }
 
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
         System.err.println("----- PARAMETERS -----");
-
         while (!inspectClass.getName().equals("java.lang.Object")) {
             for (Field f : inspectClass.getDeclaredFields()) {
                 printField(inspectClass, f);
@@ -253,16 +252,11 @@ public class Inspector {
         System.err.print(Modifier.toString(f.getModifiers()) + " ");
         System.err.print(f.getType().toString() + " ");
         System.err.print(f.getName() + " = ");
-        System.err.println(getFieldValue(f));
-    }
-
-    private String getFieldValue(Field f) throws IllegalArgumentException, IllegalAccessException {
-        return f.get(inspectTarget).toString();
+        System.err.println(f.get(inspectTarget).toString());
     }
 
     private void printObjectMethods(Class<?> inspectClass) {
         System.err.println("-----  METHODS   -----");
-
         while (!inspectClass.getName().equals("java.lang.Object")) {
             for (Method m : inspectClass.getDeclaredMethods()) {
                 System.err.println(inspectClass.getSimpleName() + ": " + m.toString());
