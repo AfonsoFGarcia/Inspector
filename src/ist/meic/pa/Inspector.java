@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The Class Inspector.
+ */
 public class Inspector {
 
     private Object inspectTarget;
@@ -21,35 +24,77 @@ public class Inspector {
     public Inspector() {
     }
 
+    /**
+     * Gets the inspect target.
+     * 
+     * @return the inspect target
+     */
     public Object getInspectTarget() {
         return inspectTarget;
     }
 
+    /**
+     * Sets the inspect target.
+     * 
+     * @param inspectTarget the new inspect target
+     */
     public void setInspectTarget(Object inspectTarget) {
         this.inspectTarget = inspectTarget;
     }
 
+    /**
+     * Gets the inspect class.
+     * 
+     * @return the inspect class
+     */
     public Class<?> getInspectClass() {
         return inspectClass;
     }
 
+    /**
+     * Sets the inspect class.
+     * 
+     * @param inspectClass the new inspect class
+     */
     public void setInspectClass(Class<?> inspectClass) {
         this.inspectClass = inspectClass;
     }
 
+    /**
+     * Checks if is full inspector.
+     * 
+     * @return true, if is full inspector
+     */
     public boolean isFullInspector() {
         return fullInspector;
     }
 
+    /**
+     * Sets the full inspector.
+     * 
+     * @param fullInspector the new full inspector
+     */
     public void setFullInspector(boolean fullInspector) {
         this.fullInspector = fullInspector;
     }
 
+    /**
+     * Inspects.
+     * 
+     * @param target the target object
+     */
     public void inspect(Object target) {
         setObject(target, target.getClass().isPrimitive() ? false : true, target.getClass());
         readCommands();
     }
 
+    /**
+     * Sets the target object.
+     * 
+     * @param target the target object
+     * @param fI true, if the object isn't a primitive type
+     * @param cI the object's class (before autoboxing)
+     */
     private void setObject(Object target, boolean fI, Class<?> cI) {
         History.save(this);
         inspectTarget = target;
@@ -58,15 +103,18 @@ public class Inspector {
         printObjectProperties();
     }
 
+    /**
+     * Read commands.
+     */
     private void readCommands() {
         while (true) {
             System.err.print("> ");
             String[] command = System.console().readLine().split(" ");
 
             if (command[0].equals("i") && command.length == 2 && fullInspector) {
-                inspectValue(command[1], inspectTarget.getClass());
+                inspectField(command[1], inspectTarget.getClass());
             } else if (command[0].equals("m") && command.length == 3 && fullInspector) {
-                modifyValue(command[1], command[2], inspectTarget.getClass());
+                modifyFieldValue(command[1], command[2], inspectTarget.getClass());
             } else if (command[0].equals("c") && command.length >= 2 && fullInspector) {
                 callMethod(command[1], command);
             } else if (command[0].equals("q")) {
@@ -85,14 +133,21 @@ public class Inspector {
         }
     }
 
-    private List<Method> getMethods(String method, Integer numCommands) {
+    /**
+     * Gets the methods with the same name and number of parameters that aren't overriden.
+     * 
+     * @param method the method name
+     * @param numParameters the number of parameters
+     * @return the requested methods
+     */
+    private List<Method> getMethods(String method, Integer numParameters) {
         ArrayList<Method> methods = new ArrayList<Method>();
         Class<?> inspectClass = inspectTarget.getClass();
         while (inspectClass != null) {
             Method[] mets = inspectClass.getDeclaredMethods();
 
             for (Method m : mets) {
-                if (m.getParameterTypes().length == numCommands - 2 && m.getName().equals(method) && !isOverriden(methods, m)) {
+                if (m.getParameterTypes().length == numParameters - 2 && m.getName().equals(method) && !isOverriden(methods, m)) {
                     methods.add(m);
                 }
             }
@@ -101,6 +156,11 @@ public class Inspector {
         return methods;
     }
 
+    /**
+     * Gets all the methods that aren't overriden.
+     * 
+     * @return the methods
+     */
     private List<Method> getMethods() {
         ArrayList<Method> methods = new ArrayList<Method>();
         Class<?> inspectClass = inspectTarget.getClass();
@@ -117,6 +177,13 @@ public class Inspector {
         return methods;
     }
 
+    /**
+     * Checks if a method is overriden by any in the list.
+     * 
+     * @param parents the list of currently obtained methods
+     * @param toCheck the method to check
+     * @return true, if is overriden by any method in the list
+     */
     private boolean isOverriden(List<Method> parents, Method toCheck) {
         for (Method m : parents) {
             if (isOverriden(m, toCheck)) {
@@ -127,7 +194,12 @@ public class Inspector {
     }
 
     /**
+     * Checks if a method is overriden by the parent method.
      * This function is implemented using the code provided in http://stackoverflow.com/a/12134003/2116967
+     * 
+     * @param parent the parent method
+     * @param toCheck the method to check
+     * @return true, if is overriden by the parent method
      */
     private boolean isOverriden(Method parent, Method toCheck) {
         if (toCheck.getDeclaringClass().isAssignableFrom(parent.getDeclaringClass())
@@ -146,15 +218,21 @@ public class Inspector {
         return false;
     }
 
-    private void callMethod(String method, String[] command) {
+    /**
+     * Calls the method.
+     * 
+     * @param method the name of the method to call
+     * @param arguments the arguments that will be used to call the method
+     */
+    private void callMethod(String method, String[] arguments) {
         try {
-            List<Method> methods = getMethods(method, command.length);
+            List<Method> methods = getMethods(method, arguments.length);
             if (methods.size() == 1) {
-                callMethod(command, methods.get(0));
+                callMethod(arguments, methods.get(0));
             } else if (methods.size() > 1) {
                 for (Method m : methods) {
                     try {
-                        callMethod(command, m);
+                        callMethod(arguments, m);
                         return;
                     } catch (IllegalArgumentException e) {
                         continue;
@@ -171,10 +249,16 @@ public class Inspector {
         }
     }
 
-    private void callMethod(String[] command, Method m) throws InstantiationException, IllegalAccessException,
+    /**
+     * Calls the method. Auxiliary to callMethod(String method, String[] arguments).
+     * 
+     * @param arguments the arguments that will be used to call the method
+     * @param m the method that will be called
+     */
+    private void callMethod(String[] arguments, Method m) throws InstantiationException, IllegalAccessException,
             InvocationTargetException, NoSuchMethodException {
         Object ret;
-        Object[] args = castArguments(command, m.getParameterTypes());
+        Object[] args = castArguments(arguments, m.getParameterTypes());
         m.setAccessible(true);
         ret = m.invoke(inspectTarget, args);
 
@@ -184,17 +268,31 @@ public class Inspector {
         }
     }
 
-    private Object[] castArguments(String[] command, Class<?>[] parameterTypes) throws InstantiationException,
+    /**
+     * Casts the given arguments to match the method declaration.
+     * 
+     * @param parameters the parameters to cast
+     * @param parameterTypes the parameter types to cast
+     * @return array of casted objects
+     */
+    private Object[] castArguments(String[] parameters, Class<?>[] parameterTypes) throws InstantiationException,
             IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         Object[] ret = new Object[parameterTypes.length];
 
         for (int i = 0; i < parameterTypes.length; i++) {
-            ret[i] = castValue(command[i + 2], parameterTypes[i]);
+            ret[i] = castValue(parameters[i + 2], parameterTypes[i]);
         }
 
         return ret;
     }
 
+    /**
+     * Casts a value.
+     * 
+     * @param value the value to be casted
+     * @param parameter the parameter to cast
+     * @return the casted object
+     */
     private Object castValue(String value, Class<?> parameter) throws InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         if (value.startsWith("\"") && value.endsWith("\"")) {
@@ -208,16 +306,23 @@ public class Inspector {
         }
     }
 
-    private void modifyValue(String parameter, String value, Class<?> inspectClass) {
+    /**
+     * Modifies the field's value.
+     * 
+     * @param field the field to modify
+     * @param value the new value
+     * @param inspectClass the class where the field will be checked
+     */
+    private void modifyFieldValue(String field, String value, Class<?> inspectClass) {
         try {
-            Field classField = getField(parameter, inspectClass);
+            Field classField = getField(field, inspectClass);
             classField.set(inspectTarget, castValue(value, classField.getType()));
             printField(classField);
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().equals(Object.class))) {
-                modifyValue(parameter, value, inspectClass.getSuperclass());
+                modifyFieldValue(field, value, inspectClass.getSuperclass());
             } else {
-                System.err.println("The class does not have the field " + parameter);
+                System.err.println("The class does not have the field " + field);
             }
         } catch (IllegalArgumentException e) {
             System.err.println("The arguments passed do not match the declared type.");
@@ -227,31 +332,47 @@ public class Inspector {
         }
     }
 
-    private void inspectValue(String parameter, Class<?> inspectClass) {
+    /**
+     * Inspects a field and changes the inspectTarget to it.
+     * 
+     * @param field the field to be inspected
+     * @param inspectClass the class where the field will be checked
+     */
+    private void inspectField(String field, Class<?> inspectClass) {
         try {
-            Field classField = getField(parameter, inspectClass);
+            Field classField = getField(field, inspectClass);
             printField(classField);
             setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive(), classField.getClass());
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().equals(Object.class))) {
-                inspectValue(parameter, inspectClass.getSuperclass());
+                inspectField(field, inspectClass.getSuperclass());
             } else {
-                System.err.println("The class does not have the field " + parameter);
+                System.err.println("The class does not have the field " + field);
             }
         } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
         }
     }
 
-    private Field getField(String parameter, Class<?> inspectClass) throws NoSuchFieldException {
+    /**
+     * Gets the field.
+     * 
+     * @param field the field
+     * @param inspectClass the class where the field will be checked
+     * @return the requested field
+     */
+    private Field getField(String field, Class<?> inspectClass) throws NoSuchFieldException {
         for (Field f : inspectClass.getDeclaredFields()) {
-            if (f.getName().equals(parameter)) {
+            if (f.getName().equals(field)) {
                 return f;
             }
         }
         throw new NoSuchFieldException();
     }
 
+    /**
+     * Prints the object properties.
+     */
     private void printObjectProperties() {
         try {
             printClass();
@@ -268,12 +389,18 @@ public class Inspector {
         }
     }
 
+    /**
+     * Prints the class.
+     */
     private void printClass() {
         System.err.println("-----   CLASS    -----");
         System.err.print(inspectTarget.toString() + " is an instance of class ");
         System.err.println(inspectClass.getName());
     }
 
+    /**
+     * Prints the superclasses.
+     */
     private void printSuperClasses() {
         Map<Class<?>, Class<?>> superClasses = new HashMap<Class<?>, Class<?>>();
         Class<?> inspectClass = inspectTarget.getClass();
@@ -291,6 +418,9 @@ public class Inspector {
         }
     }
 
+    /**
+     * Prints the interfaces.
+     */
     private void printInterfaces() {
         HashMap<Class<?>, Class<?>> interfaces = new HashMap<Class<?>, Class<?>>();
         Class<?> inspectClass = inspectTarget.getClass();
@@ -310,6 +440,9 @@ public class Inspector {
         }
     }
 
+    /**
+     * Prints the fields.
+     */
     private void printFields() throws IllegalAccessException {
         System.err.println("----- PARAMETERS -----");
 
@@ -329,6 +462,11 @@ public class Inspector {
         }
     }
 
+    /**
+     * Prints the field.
+     * 
+     * @param f the requested field
+     */
     private void printField(Field f) throws IllegalAccessException {
         f.setAccessible(true);
         System.err.print(Modifier.toString(f.getModifiers()) + " ");
@@ -338,6 +476,9 @@ public class Inspector {
         System.err.println(value == null ? "null" : value.toString());
     }
 
+    /**
+     * Prints the object methods.
+     */
     private void printObjectMethods() {
         System.err.println("-----  METHODS   -----");
 
