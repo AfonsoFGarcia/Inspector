@@ -202,11 +202,7 @@ public class Inspector {
         } else if (value.startsWith("'") && value.endsWith("'")) {
             return value.charAt(1);
         } else if (parameter.equals(Integer.class) || parameter.equals(Integer.TYPE)) {
-            try {
-                return parameter.getConstructor(new Class[] { String.class }).newInstance(value);
-            } catch (NoSuchMethodException e) {
-                return PrimitiveWrapper.getWrapper(parameter).getConstructor(new Class[] { String.class }).newInstance(value);
-            }
+            return PrimitiveWrapper.getWrapper(parameter).getConstructor(new Class[] { String.class }).newInstance(value);
         } else {
             throw new IllegalArgumentException();
         }
