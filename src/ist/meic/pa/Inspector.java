@@ -7,7 +7,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -178,21 +177,25 @@ public class Inspector {
 
     private void printObjectProperties() {
         try {
-            Class<?> inspectClass = inspectTarget.getClass();
-            System.err.println("-----   CLASS    -----");
-            System.err.print(inspectTarget.toString() + " is an instance of class ");
-            System.err.println(inspectClass.getName());
+            printClass();
             if (fullInspector) {
                 printSuperClasses();
                 printInterfaces();
-                printFields(inspectClass);
-                printObjectMethods(inspectClass);
+                printFields();
+                printObjectMethods();
             }
             System.err.println("----------------------");
         } catch (Exception e) {
             System.err.println("An exception was caught while trying to run the method. Printing it's stack trace.");
             e.printStackTrace();
         }
+    }
+
+    private void printClass() {
+        Class<?> inspectClass = inspectTarget.getClass();
+        System.err.println("-----   CLASS    -----");
+        System.err.print(inspectTarget.toString() + " is an instance of class ");
+        System.err.println(inspectClass.getName());
     }
 
     private void printSuperClasses() {
@@ -231,14 +234,9 @@ public class Inspector {
         }
     }
 
-    private void printFields(Class<?> inspectClass) throws IllegalAccessException {
+    private void printFields() throws IllegalAccessException {
         System.err.println("----- PARAMETERS -----");
-        for (Field f : getFields()) {
-            printField(f);
-        }
-    }
 
-    private Collection<Field> getFields() {
         Class<?> inspectClass = inspectTarget.getClass();
         HashMap<String, Field> fields = new HashMap<String, Field>();
         while (!inspectClass.equals(Object.class)) {
@@ -249,7 +247,10 @@ public class Inspector {
             }
             inspectClass = inspectClass.getSuperclass();
         }
-        return fields.values();
+
+        for (Field f : fields.values()) {
+            printField(f);
+        }
     }
 
     private void printField(Field f) throws IllegalAccessException {
@@ -260,8 +261,10 @@ public class Inspector {
         System.err.println(f.get(inspectTarget).toString());
     }
 
-    private void printObjectMethods(Class<?> inspectClass) {
+    private void printObjectMethods() {
         System.err.println("-----  METHODS   -----");
+
+        Class<?> inspectClass = inspectTarget.getClass();
         while (!inspectClass.equals(Object.class)) {
             for (Method m : inspectClass.getDeclaredMethods()) {
                 System.err.println(m.toString());
