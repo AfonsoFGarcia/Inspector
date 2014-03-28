@@ -6,7 +6,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Inspector {
 
@@ -16,9 +19,13 @@ public class Inspector {
     }
 
     public void inspect(Object target) {
+        setObject(target);
+        readCommands();
+    }
+
+    private void setObject(Object target) {
         inspectTarget = target;
         printObjectProperties();
-        readCommands();
     }
 
     private void readCommands() {
@@ -40,19 +47,19 @@ public class Inspector {
         }
     }
 
-    private HashMap<Integer, Method> getMethods(String method, String[] command, Class<?> inspectClass, Integer index) {
+    private List<Method> getMethods(String method, String[] command, Class<?> inspectClass) {
         if (inspectClass == null) {
-            return new HashMap<Integer, Method>();
+            return new ArrayList<Method>();
         } else {
             Method[] mets = inspectClass.getDeclaredMethods();
-            HashMap<Integer, Method> methods = new HashMap<Integer, Method>();
+            ArrayList<Method> methods = new ArrayList<Method>();
 
             for (Method m : mets) {
                 if (m.getParameterTypes().length == command.length - 2 && m.getName().equals(method)) {
-                    methods.put(index++, m);
+                    methods.add(m);
                 }
             }
-            methods.putAll(getMethods(method, command, inspectClass.getSuperclass(), index));
+            methods.addAll(getMethods(method, command, inspectClass.getSuperclass()));
 
             return methods;
         }
@@ -61,7 +68,7 @@ public class Inspector {
     private void callMethod(String method, String[] command, Class<?> inspectClass) {
         try {
             Object ret = null;
-            HashMap<Integer, Method> methods = getMethods(method, command, inspectClass, 0);
+            List<Method> methods = getMethods(method, command, inspectClass);
 
             if (methods.size() == 1) {
                 Object[] args = castArguments(command, methods.get(0).getParameterTypes());
@@ -71,12 +78,11 @@ public class Inspector {
                 if (ret != null) {
                     System.err.println(ret.toString());
                     if (!methods.get(0).getReturnType().isPrimitive()) {
-                        inspectTarget = ret;
-                        printObjectProperties();
+                        setObject(ret);
                     }
                 }
             } else if (methods.size() > 1) {
-                for (Method m : methods.values()) {
+                for (Method m : methods) {
                     try {
                         Object[] args = castArguments(command, m.getParameterTypes());
                         m.setAccessible(true);
@@ -85,8 +91,7 @@ public class Inspector {
                         if (ret != null) {
                             System.err.println(ret.toString());
                             if (!m.getReturnType().isPrimitive()) {
-                                inspectTarget = ret;
-                                printObjectProperties();
+                                setObject(ret);
                             }
                         }
 
@@ -135,33 +140,9 @@ public class Inspector {
 
     private void modifyValue(String parameter, String value, Class<?> inspectClass) {
         try {
-            HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
-            if (classFields.size() == 1) {
-                classFields.get(0).set(inspectTarget, castValue(value, classFields.get(0).getType()));
-                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
-            } else if (classFields.size() > 1) {
-                System.err.println("Choose a field:");
-                Boolean incorrectValue = true;
-                Integer fieldValue = 0;
-                while (incorrectValue) {
-                    Integer index = 0;
-                    for (Field f : classFields.values()) {
-                        System.err.print(index++ + ": ");
-                        printField(f.getDeclaringClass(), f);
-                    }
-                    System.err.print("> ");
-                    fieldValue = Integer.parseInt(System.console().readLine());
-                    if (fieldValue >= classFields.size()) {
-                        System.err.println("Please select a correct value!");
-                    } else {
-                        incorrectValue = false;
-                    }
-                }
-                classFields.get(fieldValue).set(inspectTarget, castValue(value, classFields.get(fieldValue).getType()));
-
-            } else {
-                throw new NoSuchFieldException();
-            }
+            Field classField = getField(parameter, inspectClass);
+            classField.set(inspectTarget, castValue(value, classField.getType()));
+            printField(classField.getDeclaringClass(), classField);
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
                 modifyValue(parameter, value, inspectClass.getSuperclass());
@@ -178,16 +159,9 @@ public class Inspector {
 
     private void inspectValue(String parameter, Class<?> inspectClass) {
         try {
-            HashMap<Integer, Field> classFields = getFields(parameter, inspectClass, 0);
-            if (classFields.size() == 1) {
-                printField(classFields.get(0).getDeclaringClass(), classFields.get(0));
-            } else if (classFields.size() > 1) {
-                for (Field f : classFields.values()) {
-                    printField(f.getDeclaringClass(), f);
-                }
-            } else {
-                throw new NoSuchFieldException();
-            }
+            Field classField = getField(parameter, inspectClass);
+            printField(classField.getDeclaringClass(), classField);
+            setObject(classField.get(inspectTarget));
         } catch (NoSuchFieldException e) {
             if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
                 inspectValue(parameter, inspectClass.getSuperclass());
@@ -199,17 +173,13 @@ public class Inspector {
         }
     }
 
-    private HashMap<Integer, Field> getFields(String parameter, Class<?> inspectClass, Integer index)
-            throws NoSuchFieldException, SecurityException {
-        HashMap<Integer, Field> fields = new HashMap<Integer, Field>();
-
+    private Field getField(String parameter, Class<?> inspectClass) throws NoSuchFieldException {
         for (Field f : inspectClass.getDeclaredFields()) {
             if (f.getName().equals(parameter)) {
-                fields.put(index++, f);
+                return f;
             }
         }
-
-        return fields;
+        throw new NoSuchFieldException();
     }
 
     private void printObjectProperties() {
@@ -220,9 +190,7 @@ public class Inspector {
             System.err.println(inspectClass.getName());
             printSuperClasses();
             printInterfaces();
-            System.err.println("----- PARAMETERS -----");
             printFields(inspectClass);
-            System.err.println("-----  METHODS   -----");
             printObjectMethods(inspectClass);
             System.err.println("----------------------");
         } catch (Exception e) {
@@ -232,7 +200,7 @@ public class Inspector {
     }
 
     private void printSuperClasses() {
-        HashMap<Class<?>, Class<?>> superClasses = getSuperClasses(inspectTarget.getClass());
+        Map<Class<?>, Class<?>> superClasses = getSuperClasses(inspectTarget.getClass());
         if (superClasses.size() > 0) {
             System.err.println("----- SUPER CLASS ----");
             for (Class<?> c : superClasses.values()) {
@@ -241,7 +209,7 @@ public class Inspector {
         }
     }
 
-    private HashMap<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
+    private Map<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
         HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
         if (!inspectClass.getName().equals("java.lang.Object")) {
             returnMap.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
@@ -251,7 +219,7 @@ public class Inspector {
     }
 
     private void printInterfaces() {
-        HashMap<Class<?>, Class<?>> interfaces = getInterfaces(inspectTarget.getClass());
+        Map<Class<?>, Class<?>> interfaces = getInterfaces(inspectTarget.getClass());
         if (interfaces.size() > 0) {
             System.err.println("----- INTERFACES -----");
             for (Class<?> i : interfaces.values()) {
@@ -260,7 +228,7 @@ public class Inspector {
         }
     }
 
-    private HashMap<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
+    private Map<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
         HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
         if (!inspectClass.getName().equals("java.lang.Object")) {
             for (Class<?> i : inspectClass.getInterfaces()) {
@@ -272,13 +240,12 @@ public class Inspector {
     }
 
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
-        while (!inspectClass.getName().equals("java.lang.Object")) {
-            Field[] classFields = inspectClass.getDeclaredFields();
+        System.err.println("----- PARAMETERS -----");
 
-            for (Field f : classFields) {
+        while (!inspectClass.getName().equals("java.lang.Object")) {
+            for (Field f : inspectClass.getDeclaredFields()) {
                 printField(inspectClass, f);
             }
-
             inspectClass = inspectClass.getSuperclass();
         }
     }
@@ -297,13 +264,13 @@ public class Inspector {
     }
 
     private void printObjectMethods(Class<?> inspectClass) {
-        if (inspectClass.getName().equals("java.lang.Object")) {
-            return;
-        } else {
+        System.err.println("-----  METHODS   -----");
+
+        while (!inspectClass.getName().equals("java.lang.Object")) {
             for (Method m : inspectClass.getDeclaredMethods()) {
                 System.err.println(inspectClass.getSimpleName() + ": " + m.toString());
             }
-            printObjectMethods(inspectClass.getSuperclass());
+            inspectClass = inspectClass.getSuperclass();
         }
     }
 }
