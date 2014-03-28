@@ -40,7 +40,7 @@ public class Inspector {
             } else if (command[0].equals("m") && command.length == 3 && fullInspector) {
                 modifyValue(command[1], command[2], inspectTarget.getClass());
             } else if (command[0].equals("c") && command.length >= 2 && fullInspector) {
-                callMethod(command[1], command, inspectTarget.getClass());
+                callMethod(command[1], command);
             } else if (command[0].equals("q")) {
                 return;
             } else {
@@ -49,27 +49,25 @@ public class Inspector {
         }
     }
 
-    private List<Method> getMethods(String method, String[] command, Class<?> inspectClass) {
-        if (inspectClass == null) {
-            return new ArrayList<Method>();
-        } else {
+    private List<Method> getMethods(String method, Integer numCommands) {
+        ArrayList<Method> methods = new ArrayList<Method>();
+        Class<?> inspectClass = inspectTarget.getClass();
+        while (inspectClass != null) {
             Method[] mets = inspectClass.getDeclaredMethods();
-            ArrayList<Method> methods = new ArrayList<Method>();
 
             for (Method m : mets) {
-                if (m.getParameterTypes().length == command.length - 2 && m.getName().equals(method)) {
+                if (m.getParameterTypes().length == numCommands - 2 && m.getName().equals(method)) {
                     methods.add(m);
                 }
             }
-            methods.addAll(getMethods(method, command, inspectClass.getSuperclass()));
-
-            return methods;
+            inspectClass = inspectClass.getSuperclass();
         }
+        return methods;
     }
 
-    private void callMethod(String method, String[] command, Class<?> inspectClass) {
+    private void callMethod(String method, String[] command) {
         try {
-            List<Method> methods = getMethods(method, command, inspectClass);
+            List<Method> methods = getMethods(method, command.length);
             if (methods.size() == 1) {
                 callMethod(command, methods.get(0));
             } else if (methods.size() > 1) {
@@ -139,7 +137,7 @@ public class Inspector {
             classField.set(inspectTarget, castValue(value, classField.getType()));
             printField(classField.getDeclaringClass(), classField);
         } catch (NoSuchFieldException e) {
-            if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
+            if (!(inspectClass.getSuperclass().equals(Object.class))) {
                 modifyValue(parameter, value, inspectClass.getSuperclass());
             } else {
                 System.err.println("The class does not have the field " + parameter);
@@ -158,7 +156,7 @@ public class Inspector {
             printField(classField.getDeclaringClass(), classField);
             setObject(classField.get(inspectTarget), !classField.getClass().isPrimitive());
         } catch (NoSuchFieldException e) {
-            if (!(inspectClass.getSuperclass().getName().equals("java.lang.Object"))) {
+            if (!(inspectClass.getSuperclass().equals(Object.class))) {
                 inspectValue(parameter, inspectClass.getSuperclass());
             } else {
                 System.err.println("The class does not have the field " + parameter);
@@ -197,7 +195,14 @@ public class Inspector {
     }
 
     private void printSuperClasses() {
-        Map<Class<?>, Class<?>> superClasses = getSuperClasses(inspectTarget.getClass());
+        Map<Class<?>, Class<?>> superClasses = new HashMap<Class<?>, Class<?>>();
+        Class<?> inspectClass = inspectTarget.getClass();
+
+        while (!inspectClass.equals(Object.class)) {
+            superClasses.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
+            inspectClass = inspectClass.getSuperclass();
+        }
+
         if (superClasses.size() > 0) {
             System.err.println("----- SUPER CLASS ----");
             for (Class<?> c : superClasses.values()) {
@@ -206,17 +211,17 @@ public class Inspector {
         }
     }
 
-    private Map<Class<?>, Class<?>> getSuperClasses(Class<?> inspectClass) {
-        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
+    private void printInterfaces() {
+        HashMap<Class<?>, Class<?>> interfaces = new HashMap<Class<?>, Class<?>>();
+        Class<?> inspectClass = inspectTarget.getClass();
+
         while (!inspectClass.equals(Object.class)) {
-            returnMap.put(inspectClass.getSuperclass(), inspectClass.getSuperclass());
+            for (Class<?> i : inspectClass.getInterfaces()) {
+                interfaces.put(i, i);
+            }
             inspectClass = inspectClass.getSuperclass();
         }
-        return returnMap;
-    }
 
-    private void printInterfaces() {
-        Map<Class<?>, Class<?>> interfaces = getInterfaces(inspectTarget.getClass());
         if (interfaces.size() > 0) {
             System.err.println("----- INTERFACES -----");
             for (Class<?> i : interfaces.values()) {
@@ -225,20 +230,9 @@ public class Inspector {
         }
     }
 
-    private Map<Class<?>, Class<?>> getInterfaces(Class<?> inspectClass) {
-        HashMap<Class<?>, Class<?>> returnMap = new HashMap<Class<?>, Class<?>>();
-        while (!inspectClass.equals(Object.class)) {
-            for (Class<?> i : inspectClass.getInterfaces()) {
-                returnMap.put(i, i);
-            }
-            inspectClass = inspectClass.getSuperclass();
-        }
-        return returnMap;
-    }
-
     private void printFields(Class<?> inspectClass) throws IllegalAccessException {
         System.err.println("----- PARAMETERS -----");
-        while (!inspectClass.getName().equals("java.lang.Object")) {
+        while (!inspectClass.equals(Object.class)) {
             for (Field f : inspectClass.getDeclaredFields()) {
                 printField(inspectClass, f);
             }
@@ -257,7 +251,7 @@ public class Inspector {
 
     private void printObjectMethods(Class<?> inspectClass) {
         System.err.println("-----  METHODS   -----");
-        while (!inspectClass.getName().equals("java.lang.Object")) {
+        while (!inspectClass.equals(Object.class)) {
             for (Method m : inspectClass.getDeclaredMethods()) {
                 System.err.println(inspectClass.getSimpleName() + ": " + m.toString());
             }
